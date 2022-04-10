@@ -5,6 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 import multiprocessing
 import os
+import time
 
 def get_url_list(zip_code, radius, pages = 50):
     """
@@ -112,7 +113,6 @@ def get_car_info(url):
     Exterior_styling_rating = rating_breakdown[4].string
     Reliability_rating = rating_breakdown[5].string
     
-
     return {
         "car_name":car_name, 
         "price":price, 
@@ -142,30 +142,42 @@ def scrap_all_car_from_region(zip_code):
     
 
     #get all the url for cars listing pages and save in csv
-    print(f"{zip_code} starting.....")
-    car_url_list = get_url_list(zip_code, radius = 50, pages = 50)
     car_url_list_name = f"data/url_list_{zip_code}.csv"
-    pd.DataFrame(car_url_list).to_csv(car_url_list_name, index = False)
+    car_file_name = f"data/cars_{zip_code}.csv"
+    existing_file = [f for f in os.listdir("data")]
+    
+    if car_file_name not in existing_file:
+        if car_url_list_name.split('/')[1] not in existing_file:
+            print(f"{zip_code} starting.....")
+            car_url_list = get_url_list(zip_code, radius = 50, pages = 50)
+            pd.DataFrame(car_url_list).to_csv(car_url_list_name, index = False)
+        else:
+            print(f"jump {zip_code}")
+            car_url_list = pd.read_csv(car_url_list_name)
+            car_url_list = [x for x in car_url_list.loc[:,"0"]]
 
-    #get cars information using the urls generated above
-    print("{zip_code} working on cars.....")
-    count = 0
-    car_feature_csv = -1
-    for car_url in tqdm(car_url_list):
-        try:
-            car_info = get_car_info(car_url)
-            car_info["zip_code"] = str(zip_code)
-            car_info = pd.DataFrame(car_info, index=[count])
-            if(type(car_feature_csv) != int):
-                car_feature_csv = pd.concat([car_feature_csv, car_info])
-            else:
-                car_feature_csv = car_info
-            count += 1
-        except:
-            err_count += 1
-            print(car_url) 
-    car_feature_csv.to_csv(f"data/cars_{zip_code}.csv")
-     
+        #get cars information using the urls generated above
+        print(f"{zip_code} working on cars.....")
+        count = 0
+        car_feature_csv = -1
+        for car_url in tqdm(car_url_list):
+            try:
+                car_info = get_car_info(car_url)
+                car_info["zip_code"] = str(zip_code)
+                car_info = pd.DataFrame(car_info, index=[count])
+                if(type(car_feature_csv) != int):
+                    car_feature_csv = pd.concat([car_feature_csv, car_info])
+                else:
+                    car_feature_csv = car_info
+                count += 1
+            except:
+                print(car_url) 
+        time.sleep(20)
+        car_feature_csv.to_csv()
+        car_feature_csv = -1
+    else:
+        pass
+
 
 if __name__ == "__main__":
     #All the major city's zipcode in US
@@ -173,14 +185,16 @@ if __name__ == "__main__":
     zip_code_list = zip_code_csv["zip_code"]
 
     #uses multiprocessing to accelerate
-    process_list = []
+    # n = 2
+    # for i in range(0, len(zip_code_list), n):
+    #     process_list = []
+    #     for zip_code in zip_code_list[i:i+n]:
+    #         print(zip_code)
+    #         p =  multiprocessing.Process(target= scrap_all_car_from_region, args = [zip_code])
+    #         p.start()
+    #         process_list.append(p)
+    #     for p in process_list:
+    #         p.join()
+
     for zip_code in zip_code_list:
-        p =  multiprocessing.Process(target= scrap_all_car_from_region, args = [zip_code])
-        p.start()
-        process_list.append(p)
-
-    for p in process_list:
-        p.join()
-
-
-    
+        scrap_all_car_from_region(zip_code)
