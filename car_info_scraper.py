@@ -101,6 +101,7 @@ def get_car_info(url):
     for f in features_raw:
         features.append(f.string)
     features = '###'.join(features)
+    features = features.replace(",","")
 
     try:
         rating = soup.find(class_ = "sds-rating__count").string
@@ -143,7 +144,7 @@ def scrap_all_car_from_region(zip_code):
     
 
     #get all the url for cars listing pages and save in csv
-    feature_line = "car_name,price,Exterior_color,Interior_color,Drivetrain,MPG_low,MPG_high,Fuel_type,Transmission,Engine,Mileage,rating,Comfort_rating,Interior_design_rating,Performance_rating,Value_rating,Exterior_styling_rating,Reliability_rating,features,zip_code"
+    feature_line = "car_name,price,Exterior_color,Interior_color,Drivetrain,MPG_low,MPG_high,Fuel_type,Transmission,Engine,Mileage,rating,Comfort_rating,Interior_design_rating,Performance_rating,Value_rating,Exterior_styling_rating,Reliability_rating,features,zip_code\n"
     car_url_list_name = f"data/url_list_{zip_code}.csv"
     car_file_name = f"data/cars_{zip_code}.csv"
     existing_file = [f for f in os.listdir("data")]
@@ -183,16 +184,17 @@ if __name__ == "__main__":
     zip_code_list = zip_code_csv["zip_code"]
 
     #uses multiprocessing to accelerate
-    # n = 2
-    # for i in range(0, len(zip_code_list), n):
-    #     process_list = []
-    #     for zip_code in zip_code_list[i:i+n]:
-    #         print(zip_code)
-    #         p =  multiprocessing.Process(target= scrap_all_car_from_region, args = [zip_code])
-    #         p.start()
-    #         process_list.append(p)
-    #     for p in process_list:
-    #         p.join()
+    processes = 5
+    for i in range(0, len(zip_code_list), processes):
+        process_list = []
+        for zip_code in zip_code_list[i:i+processes]:
+            print(zip_code)
+            p =  multiprocessing.Process(target= scrap_all_car_from_region, args = [zip_code])
+            p.start()
+            process_list.append(p)
+        for p in process_list:
+            p.join()
 
-    for zip_code in zip_code_list:
-        scrap_all_car_from_region(zip_code)
+    # Single Process
+    # for zip_code in zip_code_list:
+    #     scrap_all_car_from_region(zip_code)
