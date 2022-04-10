@@ -36,7 +36,6 @@ def get_url_list(zip_code, radius, pages = 50):
 
     return url_list
 
-all_basics = set()
 
 def get_car_info(url):
     """
@@ -59,25 +58,24 @@ def get_car_info(url):
 
     price = soup.find(class_="primary-price").string
     price = filter(str.isdigit, price)
-    price = int("".join(price))
+    price = "".join(price)
 
     car_name = soup.find(class_ = "listing-title").string.strip()
 
-    Exterior_color = -1
-    Interior_color  = -1
-    Drivetrain  = -1
-    MPG_low = -1
-    MPG_high = -1
-    Fuel_type = -1 
-    Transmission = -1
-    Engine = -1
-    Mileage = -1
+    Exterior_color = "-1"
+    Interior_color  ="-1"
+    Drivetrain  ="-1"
+    MPG_low ="-1"
+    MPG_high ="-1"
+    Fuel_type ="-1"
+    Transmission = "-1"
+    Engine = "-1"
+    Mileage = "-1"
 
     description = soup.find_all(class_ = "fancy-description-list")
     for name, value in zip(description[0].find_all('dt'), description[0].find_all('dd')):
         name = name.string.strip()
         value = value
-        all_basics.add(name)
         if name == "Exterior color":
             Exterior_color = value.string.strip()
         elif name ==  "Interior color":
@@ -87,7 +85,7 @@ def get_car_info(url):
         elif name ==  "MPG":
             if(len(value.find_all("span")) != 0):
                 MPG = value.find_all("span")[-1].string
-                MPG_low, MPG_high = int(MPG.split('–')[0]), int(MPG.split('–')[1])
+                MPG_low, MPG_high = MPG.split('–')[0], MPG.split('–')[1]
         elif name ==  "Fuel type":
             Fuel_type = value.string.strip()
         elif name ==  "Transmission":
@@ -96,7 +94,7 @@ def get_car_info(url):
             Engine = value.string.strip()
         elif name ==  "Mileage":
             Mileage = filter(str.isdigit, value.string)
-            Mileage = int("".join(Mileage))
+            Mileage = "".join(Mileage)
 
     features = []
     features_raw = soup.find_all(class_ = 'all-features-item')
@@ -104,15 +102,18 @@ def get_car_info(url):
         features.append(f.string)
     features = '###'.join(features)
 
-    rating = soup.find(class_ = "sds-rating__count").string
-    rating_breakdown = soup.find(class_="review-breakdown").find_all(class_ = "sds-definition-list__value")
-    Comfort_rating = rating_breakdown[0].string
-    Interior_design_rating = rating_breakdown[1].string
-    Performance_rating = rating_breakdown[2].string
-    Value_rating = rating_breakdown[3].string
-    Exterior_styling_rating = rating_breakdown[4].string
-    Reliability_rating = rating_breakdown[5].string
-    
+    try:
+        rating = soup.find(class_ = "sds-rating__count").string
+        rating_breakdown = soup.find(class_="review-breakdown").find_all(class_ = "sds-definition-list__value")
+        Comfort_rating = rating_breakdown[0].string
+        Interior_design_rating = rating_breakdown[1].string
+        Performance_rating = rating_breakdown[2].string
+        Value_rating = rating_breakdown[3].string
+        Exterior_styling_rating = rating_breakdown[4].string
+        Reliability_rating = rating_breakdown[5].string
+    except:
+        print(f"No rating: {url}")
+
     return {
         "car_name":car_name, 
         "price":price, 
@@ -142,11 +143,12 @@ def scrap_all_car_from_region(zip_code):
     
 
     #get all the url for cars listing pages and save in csv
+    feature_line = "car_name,price,Exterior_color,Interior_color,Drivetrain,MPG_low,MPG_high,Fuel_type,Transmission,Engine,Mileage,rating,Comfort_rating,Interior_design_rating,Performance_rating,Value_rating,Exterior_styling_rating,Reliability_rating,features,zip_code"
     car_url_list_name = f"data/url_list_{zip_code}.csv"
     car_file_name = f"data/cars_{zip_code}.csv"
     existing_file = [f for f in os.listdir("data")]
     
-    if car_file_name not in existing_file:
+    if car_file_name.split('/')[1] not in existing_file:
         if car_url_list_name.split('/')[1] not in existing_file:
             print(f"{zip_code} starting.....")
             car_url_list = get_url_list(zip_code, radius = 50, pages = 50)
@@ -156,25 +158,21 @@ def scrap_all_car_from_region(zip_code):
             car_url_list = pd.read_csv(car_url_list_name)
             car_url_list = [x for x in car_url_list.loc[:,"0"]]
 
+
         #get cars information using the urls generated above
         print(f"{zip_code} working on cars.....")
-        count = 0
-        car_feature_csv = -1
+        with open(car_file_name, 'a') as car_file:
+            car_file.write(feature_line)
         for car_url in tqdm(car_url_list):
             try:
                 car_info = get_car_info(car_url)
                 car_info["zip_code"] = str(zip_code)
-                car_info = pd.DataFrame(car_info, index=[count])
-                if(type(car_feature_csv) != int):
-                    car_feature_csv = pd.concat([car_feature_csv, car_info])
-                else:
-                    car_feature_csv = car_info
-                count += 1
+                line = ','.join(car_info.values()) + '\n'
+                with open(car_file_name, 'a') as car_file:
+                    car_file.write(line)
             except:
-                print(car_url) 
+                print(f"unknown {car_url}") 
         time.sleep(20)
-        car_feature_csv.to_csv()
-        car_feature_csv = -1
     else:
         pass
 
