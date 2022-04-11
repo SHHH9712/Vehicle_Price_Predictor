@@ -145,12 +145,12 @@ def scrap_all_car_from_region(zip_code):
 
     #get all the url for cars listing pages and save in csv
     feature_line = "car_name,price,Exterior_color,Interior_color,Drivetrain,MPG_low,MPG_high,Fuel_type,Transmission,Engine,Mileage,rating,Comfort_rating,Interior_design_rating,Performance_rating,Value_rating,Exterior_styling_rating,Reliability_rating,features,zip_code\n"
-    car_url_list_name = f"data/url_list_{zip_code}.csv"
-    car_file_name = f"data/cars_{zip_code}.csv"
+    car_url_list_name = f"data/url_info/url_list_{zip_code}.csv"
+    car_file_name = f"data/car_info/cars_{zip_code}.csv"
     existing_file = [f for f in os.listdir("data")]
     
-    if car_file_name.split('/')[1] not in existing_file:
-        if car_url_list_name.split('/')[1] not in existing_file:
+    if car_file_name.split('/')[-1] not in existing_file:
+        if car_url_list_name.split('/')[-11] not in existing_file:
             print(f"{zip_code} starting.....")
             car_url_list = get_url_list(zip_code, radius = 50, pages = 50)
             pd.DataFrame(car_url_list).to_csv(car_url_list_name, index = False)
@@ -180,7 +180,7 @@ def scrap_all_car_from_region(zip_code):
 
 if __name__ == "__main__":
     #All the major city's zipcode in US
-    zip_code_csv = pd.read_csv("major_city_zip_code.csv", on_bad_lines='skip')
+    zip_code_csv = pd.read_csv("data/major_city_zip_code.csv", on_bad_lines='skip')
     zip_code_list = zip_code_csv["zip_code"]
 
     #uses multiprocessing to accelerate
